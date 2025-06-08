@@ -2,21 +2,20 @@ package brightlogic.globapay.domain.model;
 
 import brightlogic.globapay.domain.enums.AuditEventType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Builder;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
 import java.util.UUID;
 
+@Builder
 @Entity
 @Table(name = "audit_logs")
 public class AuditLog {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+    private UUID auditId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -36,10 +35,10 @@ public class AuditLog {
 
     private String userAgent;
 
-    public AuditLog(UUID id, AuditEventType eventType, String message,
+    public AuditLog(UUID auditId, AuditEventType eventType, String message,
                     UUID userId, UUID transactionId, Instant timestamp,
                     String ipAddress, String userAgent) {
-        this.id = id;
+        this.auditId = auditId;
         this.eventType = eventType;
         this.message = message;
         this.userId = userId;
@@ -49,16 +48,19 @@ public class AuditLog {
         this.userAgent = userAgent;
     }
 
-    public AuditLog(UUID id) {
-        this.id = id;
+    public AuditLog(UUID auditId) {
+        this.auditId = auditId;
     }
 
-    public UUID getId() {
-        return id;
+    public AuditLog() {
     }
 
-    public void setId(UUID id) {
-        this.id = id;
+    public UUID getAuditId() {
+        return auditId;
+    }
+
+    public void setAuditId(UUID auditId) {
+        this.auditId = auditId;
     }
 
     public AuditEventType getEventType() {
@@ -115,9 +117,6 @@ public class AuditLog {
 
     public void setUserAgent(String userAgent) {
         this.userAgent = userAgent;
-    }
-
-    public AuditLog() {
     }
 
 

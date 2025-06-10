@@ -16,4 +16,8 @@ public interface ExchangeRateService {
     List<ExchangeRateResponse> getAllRates();
 
     void deactivateRate(UUID rateId);
+
+    void validateCurrency(CurrencyType currency);
+
+    double getExchangeRate(CurrencyType currency, CurrencyType currencyType);
 }

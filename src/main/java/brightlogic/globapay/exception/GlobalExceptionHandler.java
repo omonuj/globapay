@@ -1,6 +1,8 @@
 package brightlogic.globapay.exception;
 
 import java.util.Map;
+
+import brightlogic.globapay.exception.paymentexception.PaymentProcessingException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -14,7 +16,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Map.of("error", ex.getMessage()));
     }
-
 
     @ExceptionHandler(BusinessValidationException.class)
     public ResponseEntity<?> handleValidation(BusinessValidationException ex) {

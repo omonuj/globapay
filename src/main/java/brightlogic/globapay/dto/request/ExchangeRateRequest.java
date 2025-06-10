@@ -1,5 +1,5 @@
 package brightlogic.globapay.dto.request;
-
+import java.sql.Timestamp;
 import java.math.BigDecimal;
 
 public class ExchangeRateRequest {
@@ -8,6 +8,7 @@ public class ExchangeRateRequest {
     private String targetCurrency;
     private BigDecimal rate;
     private boolean isActive;
+    private Timestamp timestamp;
 
     public String getSourceCurrency() {
         return sourceCurrency;
@@ -39,5 +40,13 @@ public class ExchangeRateRequest {
 
     public void setActive(boolean active) {
         isActive = active;
+    }
+
+    public Timestamp getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(Timestamp timestamp) {
+        this.timestamp = timestamp;
     }
 }

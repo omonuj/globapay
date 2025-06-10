@@ -16,4 +16,6 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
         List<PaymentTransaction> findByUserId(UUID userId);
 
         List<PaymentTransaction> findByUserIdAndStatus(UUID userId, PaymentStatus status);
+
+        Optional<PaymentTransaction> findByTransactionId(UUID transactionId);
 }

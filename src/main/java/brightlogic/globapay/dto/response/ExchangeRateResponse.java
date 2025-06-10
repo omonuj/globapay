@@ -1,6 +1,7 @@
 package brightlogic.globapay.dto.response;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.UUID;
 
 public class ExchangeRateResponse {
@@ -10,6 +11,7 @@ public class ExchangeRateResponse {
     private String targetCurrency;
     private BigDecimal rate;
     private boolean isActive;
+    private Timestamp timestamp;
 
     public UUID getExchangeRateId() {
         return exchangeRateId;
@@ -49,5 +51,13 @@ public class ExchangeRateResponse {
 
     public void setIsActive(boolean active) {
         isActive = active;
+    }
+
+    public Timestamp getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(Timestamp timestamp) {
+        this.timestamp = timestamp;
     }
 }

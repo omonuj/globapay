@@ -1,12 +1,16 @@
 package brightlogic.globapay.controller;
 
+import brightlogic.globapay.domain.model.ApiKey;
+import brightlogic.globapay.dto.request.ApiKeyRequest;
+import brightlogic.globapay.dto.response.ApiKeyResponse;
+import brightlogic.globapay.exception.apikeyexception.ApiKeyNotFoundException;
+import brightlogic.globapay.mapper.ApiKeyMapper;
 import brightlogic.globapay.service.interfaces.ApiKeyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/apikey")
@@ -15,10 +19,19 @@ public class ApiKeyController {
 
 
     private final ApiKeyService apiKeyService;
+    private final ApiKeyMapper apiKeyMapper;
 
-    @GetMapping("/validate")
-    public ResponseEntity<Boolean> validateKey(@RequestParam String key) {
-        boolean valid = apiKeyService.isValid(key);
-        return ResponseEntity.ok(valid);
+    @PostMapping
+    public ApiKeyResponse createKey(@RequestBody ApiKeyRequest request) {
+        ApiKey apiKey = apiKeyMapper.toEntity(request);
+        ApiKey saved = apiKeyService.save(apiKey);
+        return apiKeyMapper.toResponse(saved);
+    }
+
+    @GetMapping("/{key}")
+    public ApiKeyResponse getByKey(@PathVariable String key) {
+        Optional<ApiKey> result = apiKeyService.findByKey(key);
+        return result.map(apiKeyMapper::toResponse)
+                .orElseThrow(() -> new ApiKeyNotFoundException("Key not found: " + key));
     }
 }

@@ -10,5 +10,6 @@ public interface AuditLogService {
 
     AuditLogResponse createAuditLog(AuditLogRequest request);
     List<AuditLogResponse> getLogsByTransactionId(UUID transactionId);
+    void logFraudDetectionEvent(UUID fraudId, UUID userId, UUID transactionId, String reason, boolean flagged);
 
 }

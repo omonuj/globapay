@@ -1,21 +1,20 @@
 package brightlogic.globapay.service.interfaces;
 
-import brightlogic.globapay.dto.request.CreatePaymentRequest;
-import brightlogic.globapay.dto.response.PaymentHistoryResponse;
-import brightlogic.globapay.dto.response.PaymentResponse;
+import brightlogic.globapay.dto.request.PaymentTransactionRequest;
+import brightlogic.globapay.dto.response.PaymentTransactionResponse;
 
 import java.util.List;
 import java.util.UUID;
 
 public interface PaymentService {
 
-    PaymentResponse createPayment(CreatePaymentRequest request);
+    PaymentTransactionResponse createPayment(PaymentTransactionRequest request);
 
-    PaymentResponse processPayment(UUID transactionId);
+    PaymentTransactionResponse processPayment(UUID transactionId);
 
-    PaymentResponse getPaymentStatus(UUID transactionId);
+    PaymentTransactionResponse getPaymentStatus(UUID transactionId);
 
-    List<PaymentHistoryResponse> getPaymentHistory(UUID userId);
+    List<PaymentTransactionResponse> getPaymentHistory(UUID userId);
 
-    PaymentResponse refundPayment(UUID transactionId);
+    PaymentTransactionResponse refundPayment(UUID transactionId);
 }

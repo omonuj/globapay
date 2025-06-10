@@ -7,4 +7,6 @@ public interface ApiKeyService {
 
     Optional<ApiKey> findByKey(String key);
     boolean isValid(String key);
+
+    ApiKey save(ApiKey apiKey);
 }

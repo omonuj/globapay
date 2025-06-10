@@ -1,18 +1,26 @@
 package brightlogic.globapay.service.impl;
 
-import brightlogic.globapay.domain.model.PaymentTransaction;
-import brightlogic.globapay.dto.request.CreatePaymentRequest;
-import brightlogic.globapay.dto.response.PaymentHistoryResponse;
-import brightlogic.globapay.dto.response.PaymentResponse;
+import brightlogic.globapay.domain.enums.CurrencyType;
+import brightlogic.globapay.domain.enums.PaymentStatus;
+import brightlogic.globapay.dto.request.PaymentTransactionRequest;
+import brightlogic.globapay.dto.response.PaymentTransactionResponse;
+import brightlogic.globapay.event.publisher.PaymentEventPublisher;
+import brightlogic.globapay.exception.paymentexception.PaymentProcessingException;
 import brightlogic.globapay.mapper.PaymentMapper;
+import brightlogic.globapay.service.interfaces.processor.PaymentProcessor;
 import brightlogic.globapay.repository.PaymentTransactionRepository;
+import brightlogic.globapay.service.impl.processor.PaymentProcessorFactory;
+import brightlogic.globapay.service.interfaces.ExchangeRateService;  // changed import
 import brightlogic.globapay.service.interfaces.PaymentService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -21,44 +29,49 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final PaymentMapper paymentMapper;
     private final PaymentProcessorFactory paymentProcessorFactory;
-    private final CurrencyConversionService currencyConversionService;
+    private final ExchangeRateService exchangeRateService;  // changed here
     private final PaymentEventPublisher paymentEventPublisher;
 
     @Override
     @Transactional
-    public PaymentResponse createPayment(CreatePaymentRequest request) {
-        // Validate currency supported
-        currencyConversionService.validateCurrency(request.getCurrency());
+    public PaymentTransactionResponse createPayment(PaymentTransactionRequest request) {
 
-        // Get exchange rate and convert to base currency (e.g., USD)
-        var rate = currencyConversionService.getExchangeRate(request.getCurrency(), CurrencyType.USD);
-        double amountInBase = request.getAmount() * rate;
+        exchangeRateService.validateCurrency(request.getCurrency());
 
-        var transaction = PaymentTransaction.builder()
-                .transactionId(UUID.randomUUID())
-                .userId(request.getUserId())
-                .amount(request.getAmount())
-                .currency(request.getCurrency())
-                .paymentMethod(request.getPaymentMethod())
-                .status(PaymentStatus.PENDING)
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
-                .exchangeRate(rate)
-                .amountInBaseCurrency(amountInBase)
-                .build();
+        if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Amount must be greater than zero");
+        }
 
-        PaymentTransaction saved = paymentTransactionRepository.save(transaction);
-        return paymentMapper.toPaymentResponse(saved);
+
+        if (request.getUserId() == null) {
+            throw new IllegalArgumentException("User ID must be provided");
+        }
+
+        double rate = exchangeRateService.getExchangeRate(request.getCurrency(), CurrencyType.USD);
+        BigDecimal amountInBase = request.getAmount().multiply(BigDecimal.valueOf(rate));
+
+
+        var transaction = paymentMapper.toEntity(request);
+        transaction.setTransactionId(UUID.randomUUID());
+        transaction.setStatus(PaymentStatus.PENDING);
+        transaction.setCreatedAt(LocalDateTime.now());
+        transaction.setUpdatedAt(LocalDateTime.now());
+        transaction.setExchangeRate(rate);
+        transaction.setAmountInBaseCurrency(amountInBase);
+        transaction.setUserId(request.getUserId());
+
+        var saved = paymentTransactionRepository.save(transaction);
+        return paymentMapper.toResponse(saved);
     }
 
     @Override
     @Transactional
-    public PaymentResponse processPayment(UUID transactionId) {
+    public PaymentTransactionResponse processPayment(UUID transactionId) {
         var transaction = paymentTransactionRepository.findByTransactionId(transactionId)
-                .orElseThrow(() -> new PaymentException("Transaction not found"));
+                .orElseThrow(() -> new PaymentProcessingException("Transaction not found"));
 
         if (transaction.getStatus() != PaymentStatus.PENDING) {
-            throw new PaymentException("Transaction cannot be processed in current status");
+            throw new PaymentProcessingException("Transaction cannot be processed in current status");
         }
 
         PaymentProcessor processor = paymentProcessorFactory.getProcessor(transaction.getPaymentMethod());
@@ -66,42 +79,42 @@ public class PaymentServiceImpl implements PaymentService {
         boolean success = processor.process(transaction);
 
         transaction.setStatus(success ? PaymentStatus.COMPLETED : PaymentStatus.FAILED);
-        transaction.setUpdatedAt(Instant.now());
+        transaction.setUpdatedAt(LocalDateTime.now());
         paymentTransactionRepository.save(transaction);
 
-        // Publish payment event
-        if(success) {
+        if (success) {
             paymentEventPublisher.publishPaymentCompletedEvent(transaction);
         } else {
             paymentEventPublisher.publishPaymentFailedEvent(transaction);
         }
 
-        return paymentMapper.toPaymentResponse(transaction);
+        return paymentMapper.toResponse(transaction);
     }
 
     @Override
-    public PaymentResponse getPaymentStatus(UUID transactionId) {
+    @Transactional(Transactional.TxType.SUPPORTS)
+    public PaymentTransactionResponse getPaymentStatus(UUID transactionId) {
         var transaction = paymentTransactionRepository.findByTransactionId(transactionId)
-                .orElseThrow(() -> new PaymentException("Transaction not found"));
-        return paymentMapper.toPaymentResponse(transaction);
+                .orElseThrow(() -> new PaymentProcessingException("Transaction not found"));
+        return paymentMapper.toResponse(transaction);
     }
 
     @Override
-    public List<PaymentResponse> getPaymentHistory(UUID userId) {
-        List<PaymentTransaction> transactions = paymentTransactionRepository.findByUserId(userId);
-        return transactions.stream()
-                .map(paymentMapper::toPaymentResponse)
+    @Transactional(Transactional.TxType.SUPPORTS)
+    public List<PaymentTransactionResponse> getPaymentHistory(UUID userId) {
+        return paymentTransactionRepository.findByUserId(userId).stream()
+                .map(paymentMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public PaymentResponse refundPayment(UUID transactionId) {
+    public PaymentTransactionResponse refundPayment(UUID transactionId) {
         var transaction = paymentTransactionRepository.findByTransactionId(transactionId)
-                .orElseThrow(() -> new PaymentException("Transaction not found"));
+                .orElseThrow(() -> new PaymentProcessingException("Transaction not found"));
 
         if (transaction.getStatus() != PaymentStatus.COMPLETED) {
-            throw new PaymentException("Only COMPLETED transactions can be refunded");
+            throw new PaymentProcessingException("Only COMPLETED transactions can be refunded");
         }
 
         PaymentProcessor processor = paymentProcessorFactory.getProcessor(transaction.getPaymentMethod());
@@ -110,12 +123,11 @@ public class PaymentServiceImpl implements PaymentService {
 
         if (refunded) {
             transaction.setStatus(PaymentStatus.REFUNDED);
-            transaction.setUpdatedAt(Instant.now());
+            transaction.setUpdatedAt(LocalDateTime.now());
             paymentTransactionRepository.save(transaction);
             paymentEventPublisher.publishPaymentRefundedEvent(transaction);
         }
 
-        return paymentMapper.toPaymentResponse(transaction);
+        return paymentMapper.toResponse(transaction);
     }
-
 }

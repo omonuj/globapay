@@ -6,6 +6,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.UUID;
 
 @Entity
@@ -14,6 +15,8 @@ public class ExchangeRate {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private UUID exchangeRateId;
+
+    private Timestamp timestamp;
 
     private String sourceCurrency;
 
@@ -24,17 +27,19 @@ public class ExchangeRate {
 
     private boolean isActive;
 
-    public ExchangeRate(UUID exchangeRateId) {
-        this.exchangeRateId = exchangeRateId;
-    }
 
-    public ExchangeRate(UUID exchangeRateId, String sourceCurrency, String targetCurrency,
-                        BigDecimal rate, boolean isActive) {
+    public ExchangeRate(UUID exchangeRateId, Timestamp timestamp,
+                        String sourceCurrency, String targetCurrency, BigDecimal rate, boolean isActive) {
         this.exchangeRateId = exchangeRateId;
+        this.timestamp = timestamp;
         this.sourceCurrency = sourceCurrency;
         this.targetCurrency = targetCurrency;
         this.rate = rate;
         this.isActive = isActive;
+    }
+
+    public ExchangeRate(UUID exchangeRateId) {
+        this.exchangeRateId = exchangeRateId;
     }
 
     public ExchangeRate() {
@@ -44,8 +49,16 @@ public class ExchangeRate {
         return exchangeRateId;
     }
 
-    public void setId(UUID exchangeRateId) {
+    public void setExchangeRateId(UUID exchangeRateId) {
         this.exchangeRateId = exchangeRateId;
+    }
+
+    public Timestamp getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(Timestamp timestamp) {
+        this.timestamp = timestamp;
     }
 
     public String getSourceCurrency() {
@@ -79,6 +92,4 @@ public class ExchangeRate {
     public void setActive(boolean active) {
         isActive = active;
     }
-
-
 }
